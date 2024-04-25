@@ -181,6 +181,19 @@ EquidistantCamera::EquidistantCamera(const std::string& cameraName,
   m_inv_K13 = -mParameters.u0() / mParameters.mu();
   m_inv_K22 = 1.0 / mParameters.mv();
   m_inv_K23 = -mParameters.v0() / mParameters.mv();
+  K(0, 0) = mu;
+  K(0, 1) = 0.0f;
+  K(0, 2) = u0;
+  K(1, 0) = 0.0f;
+  K(1, 1) = mv;
+  K(1, 2) = v0;
+  K(2, 0) = 0.0f;
+  K(2, 1) = 0.0f;
+  K(2, 2) = 1.0f;
+  D(0) = k2;
+  D(1) = k3;
+  D(2) = k4;
+  D(3) = k5;
 }
 
 EquidistantCamera::EquidistantCamera(
@@ -319,6 +332,19 @@ void EquidistantCamera::liftSphere(const Eigen::Vector2d& p,
  */
 void EquidistantCamera::liftProjective(const Eigen::Vector2d& p,
                                        Eigen::Vector3d& P) const {
+#if 0
+  // single precision is enough for undistortion
+  cv::Mat uv_mat(1, 2, CV_32F);
+  uv_mat.ptr<float>(0)[0] = static_cast<float>(p.x());
+  uv_mat.ptr<float>(0)[1] = static_cast<float>(p.y());
+  uv_mat  =uv_mat.reshape(2);
+  cv::fisheye::undistortPoints(uv_mat, uv_mat, K, this->D);
+  uv_mat = uv_mat.reshape(1);
+  P.x() = uv_mat.ptr<float>(0)[0];
+  P.y() = uv_mat.ptr<float>(0)[1];
+  P.z() = 1;
+#else
+
   // Lift points to normalised plane
   Eigen::Vector2d p_u;
   p_u << m_inv_K11 * p(0) + m_inv_K13, m_inv_K22 * p(1) + m_inv_K23;
@@ -330,6 +356,7 @@ void EquidistantCamera::liftProjective(const Eigen::Vector2d& p,
   P(0) = sin(theta) * cos(phi);
   P(1) = sin(theta) * sin(phi);
   P(2) = cos(theta);
+#endif
 }
 
 /**
@@ -507,6 +534,19 @@ void EquidistantCamera::setParameters(
   m_inv_K13 = -mParameters.u0() / mParameters.mu();
   m_inv_K22 = 1.0 / mParameters.mv();
   m_inv_K23 = -mParameters.v0() / mParameters.mv();
+  K(0, 0) = parameters.mu();
+  K(0, 1) = 0.0f;
+  K(0, 2) = parameters.u0();
+  K(1, 0) = 0.0f;
+  K(1, 1) = parameters.mv();
+  K(1, 2) = parameters.v0();
+  K(2, 0) = 0.0f;
+  K(2, 1) = 0.0f;
+  K(2, 2) = 1.0f;
+  D(0) = parameters.k2();
+  D(1) = parameters.k3();
+  D(2) = parameters.k4();
+  D(3) = parameters.k5();
 }
 
 void EquidistantCamera::readParameters(

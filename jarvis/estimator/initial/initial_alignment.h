@@ -16,34 +16,33 @@
 #include <iostream>
 #include <map>
 
-#include "jarvis/estimator/feature_manager.h"
 #include "jarvis/estimator/factor/imu_factor.h"
+#include "jarvis/estimator/feature_manager.h"
 #include "jarvis/utility/utility.h"
 namespace jarvis {
 namespace estimator {
-using namespace Eigen;
-using namespace std;
-
 
 class ImageFrame {
  public:
   ImageFrame(){};
   ImageFrame(
-      const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &_points,
+      const std::map<int, std::vector<pair<int, Eigen::Matrix<double, 7, 1>>>>
+          &_points,
       double _t)
       : t{_t}, is_key_frame{false} {
     points = _points;
   };
-  map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> points;
+  std::map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> points;
   double t = 0.0;
-  Matrix3d R;
-  Vector3d T;
+  Eigen::Matrix3d R;
+  Eigen::Vector3d T;
   IntegrationBase *pre_integration = nullptr;
   bool is_key_frame = false;
 };
-void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame,
-                        Vector3d *Bgs);
-bool VisualIMUAlignment(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs,
-                        Vector3d &g, VectorXd &x);
+void solveGyroscopeBias(std::map<double, ImageFrame> &all_image_frame,
+                        Eigen::Vector3d *Bgs);
+bool VisualIMUAlignment(std::map<double, ImageFrame> &all_image_frame,
+                        Eigen::Vector3d *Bgs, Eigen::Vector3d &g,
+                        Eigen::VectorXd &x);
 }  // namespace estimator
 }  // namespace jarvis

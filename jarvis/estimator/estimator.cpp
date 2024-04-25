@@ -61,8 +61,6 @@ std::unique_ptr<EstimatorResult> ExtractKeyFrameMapPoints(
         Eigen::Quaterniond(estimator.Rs[i]));
     const transform::Rigid3d extric(estimator.tic[0],
                                     Eigen::Quaterniond(estimator.ric[0]));
-    LOG(INFO) << extric;
-    LOG(INFO) << estimator.ric[0];
     const transform::Rigid3d tracking_cam_pose = tracking_imu_pose * extric;
 
     std::vector<Eigen::Vector3d> point_clouds;
@@ -192,11 +190,13 @@ std::unique_ptr<EstimatorResult> ExtractKeyFrameMapPoints(
 //
 std::unique_ptr<EstimatorResult> Estimator::AddImageData(
     const sensor::ImageData &images) {
+  TicToc add_image_data_cost;
+
   track_num.clear();
   //
   //
   inputImage(images.time, *images.image[0], *images.image[1]);
-
+  VLOG(kGlogLevel) << "one frame cost : " << add_image_data_cost.toc();
   return ExtractKeyFrameMapPoints(*this);
 }
 //
@@ -356,9 +356,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img,
     featureFrame = featureTracker.trackImage(t, _img, _img1, &track_num);
   // printf("featureTracker time: %f\n", featureTrackerTime.toc());
 
-  mBuf.lock();
   featureBuf.push(make_pair(t, featureFrame));
-  mBuf.unlock();
   TicToc processTime;
   processMeasurements();
   // printf("process time: %f\n", processTime.toc());
@@ -426,54 +424,43 @@ bool Estimator::IMUAvailable(double t) {
 }
 
 void Estimator::processMeasurements() {
-  while (1) {
-    // printf("process measurments\n");
-    pair<double, ImageFeatureTrackerResult> feature;
-    vector<pair<double, Eigen::Vector3d>> accVector, gyrVector;
+  // printf("process measurments\n");
+  pair<double, ImageFeatureTrackerResult> feature;
+  vector<pair<double, Eigen::Vector3d>> accVector, gyrVector;
 
-    if (!featureBuf.empty()) {
-      feature = featureBuf.front();
-      curTime = feature.first + td;
-      while (1) {
-        if ((!USE_IMU || IMUAvailable(feature.first + td)))
-          break;
-        else {
-          printf("wait for imu ... \n");
-          if (!MULTIPLE_THREAD) return;
-          std::chrono::milliseconds dura(5);
-          std::this_thread::sleep_for(dura);
-        }
+  if (!featureBuf.empty()) {
+    feature = featureBuf.front();
+    curTime = feature.first + td;
+    while (1) {
+      if ((!USE_IMU || IMUAvailable(feature.first + td)))
+        break;
+      else {
+        printf("wait for imu ... \n");
+        if (!MULTIPLE_THREAD) return;
+        std::chrono::milliseconds dura(5);
+        std::this_thread::sleep_for(dura);
       }
-      mBuf.lock();
-      if (USE_IMU) getIMUInterval(prevTime, curTime, accVector, gyrVector);
-
-      featureBuf.pop();
-      mBuf.unlock();
-
-      if (USE_IMU) {
-        if (!initFirstPoseFlag) initFirstIMUPose(accVector);
-        for (size_t i = 0; i < accVector.size(); i++) {
-          double dt;
-          if (i == 0)
-            dt = accVector[i].first - prevTime;
-          else if (i == accVector.size() - 1)
-            dt = curTime - accVector[i - 1].first;
-          else
-            dt = accVector[i].first - accVector[i - 1].first;
-          processIMU(accVector[i].first, dt, accVector[i].second,
-                     gyrVector[i].second);
-        }
-      }
-      mProcess.lock();
-      processImage(feature.second, feature.first);
-      prevTime = curTime;
-      mProcess.unlock();
     }
+    if (USE_IMU) getIMUInterval(prevTime, curTime, accVector, gyrVector);
 
-    break;
-    // if (!MULTIPLE_THREAD) break;
-    // std::chrono::milliseconds dura(2);
-    // std::this_thread::sleep_for(dura);
+    featureBuf.pop();
+
+    if (USE_IMU) {
+      if (!initFirstPoseFlag) initFirstIMUPose(accVector);
+      for (size_t i = 0; i < accVector.size(); i++) {
+        double dt;
+        if (i == 0)
+          dt = accVector[i].first - prevTime;
+        else if (i == accVector.size() - 1)
+          dt = curTime - accVector[i - 1].first;
+        else
+          dt = accVector[i].first - accVector[i - 1].first;
+        processIMU(accVector[i].first, dt, accVector[i].second,
+                   gyrVector[i].second);
+      }
+    }
+    processImage(feature.second, feature.first);
+    prevTime = curTime;
   }
 }
 
@@ -762,10 +749,11 @@ bool Estimator::initialStructure() {
       // cout << "frame g " << tmp_g.transpose() << endl;
     }
     var = sqrt(var / ((int)all_image_frame.size() - 1));
-    // ROS_WARN("IMU variation %f!", var);
-    if (var < 0.25) {
+    VLOG(kGlogLevel) <<"IMU variation "<< var;
+    LOG(INFO) <<"IMU variation "<< var;
+    if (var < 0.15) {
       LOG(INFO) << "IMU excitation not enouth!";
-      // return false;
+      return false;
     }
   }
   // global sfm
@@ -972,7 +960,7 @@ void Estimator::vector2double() {
       para_SpeedBias[i][0] = Vs[i].x();
       para_SpeedBias[i][1] = Vs[i].y();
       para_SpeedBias[i][2] = Vs[i].z();
-
+      // LOG(INFO)<<Vs[i].transpose();
       para_SpeedBias[i][3] = Bas[i].x();
       para_SpeedBias[i][4] = Bas[i].y();
       para_SpeedBias[i][5] = Bas[i].z();
@@ -1055,7 +1043,7 @@ void Estimator::double2vector() {
       //           << " bgs :" << Bgs[i].transpose();
 
       // LOG(INFO) << " " << i << " bas :" << Bas[i].transpose()
-      //           << " bgs :" << Bgs[i].transpose();
+                // << " bgs :" << Bgs[i].transpose();
     }
   } else {
     for (int i = 0; i <= WINDOW_SIZE; i++) {
@@ -1254,9 +1242,9 @@ void Estimator::optimization() {
   ceres::Solver::Options options;
 
   options.linear_solver_type = ceres::DENSE_SCHUR;
-  options.num_threads = 10;
+  options.num_threads = 8;
   options.trust_region_strategy_type = ceres::DOGLEG;
-  options.max_num_iterations = NUM_ITERATIONS;
+  options.max_num_iterations = 2;
   // options.use_explicit_schur_complement = true;
   // options.minimizer_progress_to_stdout = true;
   // options.use_nonmonotonic_steps = true;
@@ -1722,6 +1710,8 @@ void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration,
   Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
   latest_P = latest_P + dt * latest_V + 0.5 * dt * dt * un_acc;
   latest_V = latest_V + dt * un_acc;
+  // LOG(INFO)<<"p "<<latest_P.transpose();
+  // LOG(INFO)<<"v "<<latest_V.transpose();
   latest_acc_0 = linear_acceleration;
   latest_gyr_0 = angular_velocity;
 }

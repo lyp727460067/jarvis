@@ -8,8 +8,8 @@
  * you may not use this file except in compliance with the License.
  *******************************************************/
 
-#pragma once
-
+#ifndef JARVIS_ESTIMATOR_ESTIMATOR_H
+#define JARVIS_ESTIMATOR_ESTIMATOR_H
 #include <ceres/ceres.h>
 
 #include <Eigen/Dense>
@@ -198,8 +198,8 @@ class Estimator {
   bool initThreadFlag = false;
 };
 
-std::unique_ptr<Estimator> TrackerFactory(
-    const std::string &config_file);
+std::unique_ptr<Estimator> TrackerFactory(const std::string &config_file);
 
 }  // namespace estimator
 }  // namespace jarvis
+#endif

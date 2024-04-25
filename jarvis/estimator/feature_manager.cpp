@@ -14,17 +14,19 @@
 namespace jarvis {
 namespace estimator {
 namespace {
+using namespace std;
+using namespace Eigen;
 constexpr uint8_t kGlogLevel = 1;
 }
 int FeaturePerId::endFrame() {
   return start_frame + feature_per_frame.size() - 1;
 }
 
-FeatureManager::FeatureManager(Matrix3d _Rs[]) : Rs(_Rs) {
+FeatureManager::FeatureManager(Eigen::Matrix3d _Rs[]) : Rs(_Rs) {
   for (int i = 0; i < NUM_OF_CAM; i++) ric[i].setIdentity();
 }
 
-void FeatureManager::setRic(Matrix3d _ric[]) {
+void FeatureManager::setRic(Eigen::Matrix3d _ric[]) {
   for (int i = 0; i < NUM_OF_CAM; i++) {
     ric[i] = _ric[i];
   }

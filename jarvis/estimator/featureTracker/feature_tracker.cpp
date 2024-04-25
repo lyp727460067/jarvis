@@ -54,13 +54,16 @@ void reduceVector(vector<int> &v, vector<uchar> status) {
 }
 
 FeatureTracker::FeatureTracker() {
+  mask_ = cv::imread(
+      "/home/lyp/project/vslam/jarvis/src/jarvis/configuration/mask.png",
+      cv::IMREAD_GRAYSCALE);
   stereo_cam = 0;
   n_id = 0;
   hasPrediction = false;
 }
 
 void FeatureTracker::setMask() {
-  mask = cv::Mat(row, col, CV_8UC1, cv::Scalar(255));
+  mask = mask_.clone();
 
   // prefer to keep features that are tracked for long time
   vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
@@ -69,11 +72,11 @@ void FeatureTracker::setMask() {
     cnt_pts_id.push_back(
         make_pair(track_cnt[i], make_pair(cur_pts[i], ids[i])));
 
-  sort(cnt_pts_id.begin(), cnt_pts_id.end(),
-       [](const pair<int, pair<cv::Point2f, int>> &a,
-          const pair<int, pair<cv::Point2f, int>> &b) {
-         return a.first > b.first;
-       });
+  std::sort(cnt_pts_id.begin(), cnt_pts_id.end(),
+            [](const pair<int, pair<cv::Point2f, int>> &a,
+               const pair<int, pair<cv::Point2f, int>> &b) {
+              return a.first > b.first;
+            });
 
   cur_pts.clear();
   ids.clear();
@@ -123,7 +126,7 @@ FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img,
       cur_pts = predict_pts;
       cv::calcOpticalFlowPyrLK(
           prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21),
-          1,
+          2,
           cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30,
                            0.01),
           cv::OPTFLOW_USE_INITIAL_FLOW);
@@ -134,10 +137,10 @@ FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img,
       }
       if (succ_num < 10)
         cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status,
-                                 err, cv::Size(21, 21), 3);
+                                 err, cv::Size(21, 21), 4);
     } else
       cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status,
-                               err, cv::Size(21, 21), 3);
+                               err, cv::Size(21, 21), 4);
     // reverse check
     if (FLOW_BACK) {
       vector<uchar> reverse_status;
@@ -177,7 +180,6 @@ FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img,
     TicToc t_m;
     setMask();
     VLOG(kGlogLevel) << "set mask costs " << t_m.toc() << "ms";
-    VLOG(kGlogLevel) << "set mask costs " << t_m.toc() << "ms";
     VLOG(kGlogLevel) << "detect feature begins";
     TicToc t_t;
     int n_max_cnt = MAX_CNT - static_cast<int>(cur_pts.size());
@@ -187,7 +189,7 @@ FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img,
       cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01,
                               MIN_DIST, mask);
     } else
-      n_pts.clear();
+    n_pts.clear();
     VLOG(kGlogLevel) << "detect feature costs: " << t_t.toc() << " ms";
 
     for (auto &p : n_pts) {
@@ -214,12 +216,12 @@ FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img,
       vector<float> err;
       // cur left ---- cur right
       cv::calcOpticalFlowPyrLK(cur_img, rightImg, cur_pts, cur_right_pts,
-                               status, err, cv::Size(21, 21), 3);
+                               status, err, cv::Size(21, 21), 4);
       // reverse check cur right ---- cur left
       if (FLOW_BACK) {
         cv::calcOpticalFlowPyrLK(rightImg, cur_img, cur_right_pts,
                                  reverseLeftPts, statusRightLeft, err,
-                                 cv::Size(21, 21), 3);
+                                 cv::Size(21, 21), 4);
         for (size_t i = 0; i < status.size(); i++) {
           if (status[i] && statusRightLeft[i] && inBorder(cur_right_pts[i]) &&
               distance(cur_pts[i], reverseLeftPts[i]) <= 0.5)
@@ -367,7 +369,8 @@ void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file) {
   for (size_t i = 0; i < calib_file.size(); i++) {
     VLOG(kGlogLevel) << "reading paramerter of camera" << calib_file[i].c_str();
     camera_models::CameraPtr camera =
-        CameraFactory::instance()->generateCameraFromYamlFile(calib_file[i]);
+        camera_models::CameraFactory::instance()->generateCameraFromYamlFile(
+            calib_file[i]);
     m_camera.push_back(camera);
   }
   if (calib_file.size() == 2) stereo_cam = 1;

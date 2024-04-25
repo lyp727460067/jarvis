@@ -14,6 +14,11 @@
 namespace jarvis {
 namespace estimator {
 
+namespace {
+using namespace std;
+using namespace Eigen;
+}  // namespace
+
 GlobalSFM::GlobalSFM() {}
 
 void GlobalSFM::triangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0,
@@ -263,17 +268,17 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l,
     }
   }
   ceres::Solver::Options options;
-  options.linear_solver_type = ceres::DENSE_SCHUR;
-  // options.minimizer_progress_to_stdout = true;
+  options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+  options.max_num_iterations =10;
   options.max_solver_time_in_seconds = 0.2;
   ceres::Solver::Summary summary;
   ceres::Solve(options, &problem, &summary);
   // std::cout << summary.BriefReport() << "\n";
   if (summary.termination_type == ceres::CONVERGENCE ||
       summary.final_cost < 5e-03) {
-    // cout << "vision only BA converge" << endl;
+    LOG(INFO) << "vision only BA converge";
   } else {
-    // cout << "vision only BA not converge " << endl;
+    LOG(INFO) << "vision only BA not converge ";
     return false;
   }
   for (int i = 0; i < frame_num; i++) {
@@ -282,14 +287,11 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l,
     q[i].y() = c_rotation[i][2];
     q[i].z() = c_rotation[i][3];
     q[i] = q[i].inverse();
-    // cout << "final  q" << " i " << i <<"  " <<q[i].w() << "  " <<
-    // q[i].vec().transpose() << endl;
   }
   for (int i = 0; i < frame_num; i++) {
-    T[i] = -1 * (q[i] * Vector3d(c_translation[i][0], c_translation[i][1],
-                                 c_translation[i][2]));
-    // cout << "final  t" << " i " << i <<"  " << T[i](0) <<"  "<< T[i](1) <<"
-    // "<< T[i](2) << endl;
+
+    T[i] = -(q[i] * Eigen::Vector3d{c_translation[i][0], c_translation[i][1],
+                                    c_translation[i][2]});
   }
   for (int i = 0; i < (int)sfm_f.size(); i++) {
     if (sfm_f[i].state)

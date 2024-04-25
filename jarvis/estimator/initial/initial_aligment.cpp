@@ -40,6 +40,8 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame,
     A += tmp_A.transpose() * tmp_A;
     b += tmp_A.transpose() * tmp_b;
   }
+
+  LOG(INFO)<<"Start solve";
   delta_bg = A.ldlt().solve(b);
   LOG(WARNING) << "gyroscope bias initial calibration " << delta_bg.transpose();
 

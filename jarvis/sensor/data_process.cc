@@ -73,7 +73,6 @@ void OrderedMultiQueue::Dispathch() {
     if (next_queue == NULL || next_data == NULL) {
       return;
     }
-    // LOG(INFO)<<next_queue_key<<" "<< std::to_string( next_data->GetTime());
     std::stringstream info;
     const double common_start_time = GetStartCommontime();
     int next_queue_size = 0;

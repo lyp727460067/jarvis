@@ -84,7 +84,6 @@ class IntegrationBase {
     result_delta_v = delta_v + un_acc * _dt;
     result_linearized_ba = linearized_ba;
     result_linearized_bg = linearized_bg;
-
     if (update_jacobian) {
       Vector3d w_x = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
       Vector3d a_0_x = _acc_0 - linearized_ba;

@@ -141,7 +141,8 @@ class EquidistantCamera : public Camera {
                             double& phi) const;
 
   Parameters mParameters;
-
+  cv::Matx<double, 3, 3> K;
+  cv::Vec<double, 4>D;
   double m_inv_K11, m_inv_K13, m_inv_K22, m_inv_K23;
 };
 

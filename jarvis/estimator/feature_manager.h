@@ -26,7 +26,6 @@ namespace estimator {
 // using namespace Eigen;
 class FeaturePerFrame {
  public:
-EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   FeaturePerFrame(const Eigen::Matrix<double, 7, 1> &_point, double td) {
     point.x() = _point(0);
     point.y() = _point(1);
@@ -49,9 +48,9 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     is_stereo = true;
   }
   double cur_td;
-  Vector3d point, pointRight;
-  Vector2d uv, uvRight;
-  Vector2d velocity, velocityRight;
+  Eigen::Vector3d point, pointRight;
+  Eigen::Vector2d uv, uvRight;
+  Eigen::Vector2d velocity, velocityRight;
   bool is_stereo;
 };
 
@@ -76,30 +75,31 @@ class FeaturePerId {
 
 class FeatureManager {
  public:
-EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  FeatureManager(Matrix3d _Rs[]);
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  FeatureManager(Eigen::Matrix3d _Rs[]);
 
-  void setRic(Matrix3d _ric[]);
+  void setRic(Eigen::Matrix3d _ric[]);
   void clearState();
   int getFeatureCount();
   bool addFeatureCheckParallax(int frame_count,
                                const ImageFeatureTrackerResult &image,
                                double td);
-  vector<pair<Vector3d, Vector3d>> getCorresponding(int frame_count_l,
-                                                    int frame_count_r);
+  std::vector<pair<Eigen::Vector3d, Eigen::Vector3d>> getCorresponding(
+      int frame_count_l, int frame_count_r);
   // void updateDepth(const VectorXd &x);
-  void setDepth(const VectorXd &x);
+  void setDepth(const Eigen::VectorXd &x);
   void removeFailures();
   void clearDepth();
-  VectorXd getDepthVector();
-  void triangulate(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[],
-                   Matrix3d ric[]);
+  Eigen::VectorXd getDepthVector();
+  void triangulate(int frameCnt, Eigen::Vector3d Ps[], Eigen::Matrix3d Rs[],
+                   Eigen::Vector3d tic[], Eigen::Matrix3d ric[]);
   void triangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0,
                         Eigen::Matrix<double, 3, 4> &Pose1,
                         Eigen::Vector2d &point0, Eigen::Vector2d &point1,
                         Eigen::Vector3d &point_3d);
-  void initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[],
-                          Vector3d tic[], Matrix3d ric[]);
+  void initFramePoseByPnP(int frameCnt, Eigen::Vector3d Ps[],
+                          Eigen::Matrix3d Rs[], Eigen::Vector3d tic[],
+                          Eigen::Matrix3d ric[]);
   bool solvePoseByPnP(Eigen::Matrix3d &R_initial, Eigen::Vector3d &P_initial,
                       vector<cv::Point2f> &pts2D, vector<cv::Point3f> &pts3D);
   void removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3d marg_P,
@@ -115,10 +115,10 @@ EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
  private:
   double compensatedParallax2(const FeaturePerId &it_per_id, int frame_count);
-  const Matrix3d *Rs = nullptr;
-  Matrix3d ric[2];
+  const Eigen::Matrix3d *Rs = nullptr;
+  Eigen::Matrix3d ric[2];
 };
-}  // namespace vins
-}  // namespace internal
+}  // namespace estimator
+}  // namespace jarvis
 
 #endif
