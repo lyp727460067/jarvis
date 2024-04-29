@@ -1260,7 +1260,7 @@ void Estimator::optimization() {
   VLOG(kGlogLevel) << "Iterations : "
                    << static_cast<int>(summary.iterations.size());
   //
-  static int count= 0;
+  // static int count= 0;
   // CHECK(count++ <100);
   std::stringstream info;
   auto tmp_Q = Quaterniond(Rs[WINDOW_SIZE]);

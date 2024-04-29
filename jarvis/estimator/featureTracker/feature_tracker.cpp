@@ -17,7 +17,7 @@
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgcodecs/legacy/constants_c.h>
 #include <opencv2/imgproc/types_c.h>
-
+#include "Eigen/Eigenvalues"
 #include "glog/logging.h"
 namespace jarvis {
 namespace estimator {
@@ -34,7 +34,7 @@ vector<double> convolution(const cv::Mat &image,
                            const cv::Mat &kernal) {
   double pixSum = 0;
   vector<double> grad;
-  for (int i = 0; i < pts.size(); i++) {
+  for (size_t i = 0; i < pts.size(); i++) {
     int row = floor(pts[i].pt.y);
     int col = floor(pts[i].pt.x);
     // the pixel locates in the middle of the kernal
@@ -77,15 +77,15 @@ void efficientGoodFeaturesToTrack(InputArray _image,
   grad_y = convolution(image, keypoints, kernal_y);
 
   // 2. minMaxLoc
-  vector<pair<int, double>> eigens;
-  for (int i = 0; i < grad_x.size(); i++) {
+  std::vector<pair<int, double>> eigens;
+  for (size_t i = 0; i < grad_x.size(); i++) {
     Eigen::Matrix2d cov;
     cov(0, 0) = grad_x[i] * grad_x[i];
     cov(0, 1) = grad_x[i] * grad_y[i];
     cov(1, 0) = grad_x[i] * grad_y[i];
     cov(1, 1) = grad_y[i] * grad_y[i];
 
-    EigenSolver<Matrix2d> es(cov);
+    Eigen::EigenSolver<Matrix2d> es(cov);
     Eigen::Vector2cd eig_ = es.eigenvalues();
     Vector2d eig = eig_.real();
     double eg1 = eig(0);
@@ -98,7 +98,7 @@ void efficientGoodFeaturesToTrack(InputArray _image,
 
   sort(eigens.begin(), eigens.end(), cmp_by_value);
   vector<cv::KeyPoint> keypoints_;
-  for (int i = 0; i < eigens.size(); i++)
+  for (size_t i = 0; i < eigens.size(); i++)
     keypoints_.push_back(keypoints[eigens[i].first]);
 
   if (minDistance >= 1) {
@@ -114,7 +114,7 @@ void efficientGoodFeaturesToTrack(InputArray _image,
 
     minDistance *= minDistance;
     // push the already exist feature points into the grid
-    for (int i = 0; i < have_corners.size(); i++) {
+    for (size_t i = 0; i < have_corners.size(); i++) {
       int y = (int)(have_corners[i].y);
       int x = (int)(have_corners[i].x);
 
@@ -128,7 +128,7 @@ void efficientGoodFeaturesToTrack(InputArray _image,
       ++ncorners;
     }
 
-    for (int i = 0; i < keypoints_.size(); i++) {
+    for (size_t i = 0; i < keypoints_.size(); i++) {
       if (keypoints_[i].pt.y < 0 || keypoints_[i].pt.y > image.rows - 1)
         continue;
       if (keypoints_[i].pt.x < 0 || keypoints_[i].pt.x > image.cols - 1)
@@ -153,12 +153,12 @@ void efficientGoodFeaturesToTrack(InputArray _image,
       y2 = std::min(grid_height - 1, y2);
 
       // select feature points satisfy minDistance threshold
-      for (int yy = y1; yy <= y2; yy++) {
+    for (int  yy = y1; yy <= y2; yy++) {
         for (int xx = x1; xx <= x2; xx++) {
           std::vector<cv::Point2f> &m = grid[yy * grid_width + xx];
 
           if (m.size()) {
-            for (int j = 0; j < m.size(); j++) {
+            for (size_t j = 0; j < m.size(); j++) {
               float dx = x - m[j].x;
               float dy = y - m[j].y;
 
@@ -223,7 +223,7 @@ void reduceVector(vector<int> &v, vector<uchar> status) {
 
 FeatureTracker::FeatureTracker() {
   mask_ = cv::imread(
-      "/home/lyp/project/vslam/jarvis/src/jarvis/configuration/mask.png",
+      "/oem/mowpack/vslam/configuration/mask.png",
       cv::IMREAD_GRAYSCALE);
   stereo_cam = 0;
   n_id = 0;
